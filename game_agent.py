@@ -3,6 +3,7 @@ test your agent's strength against a set of known agents using tournament.py
 and include the results in your report.
 """
 import random
+import math
 
 
 class SearchTimeout(Exception):
@@ -209,11 +210,47 @@ class MinimaxPlayer(IsolationPlayer):
                 each helper function or else your agent will timeout during
                 testing.
         """
-        if self.time_left() < self.TIMER_THRESHOLD:
-            raise SearchTimeout()
+        def time_check():
+            if self.time_left() < self.TIMER_THRESHOLD:
+                raise SearchTimeout()
+        time_check()
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        player = game.active_player
+
+        def max_value(state, dep):
+            time_check()
+            legal_moves = state.get_legal_moves()
+            if dep == 0 or not legal_moves:
+                return self.score(state, player)
+
+            v = -math.inf
+            for move in legal_moves:
+                new_state = state.forecast_move(move)
+                v = max(v, min_value(new_state, dep - 1))
+            return v
+
+        def min_value(state, dep):
+            time_check()
+            legal_moves = state.get_legal_moves()
+            if dep == 0 or not legal_moves:
+                return self.score(state, player)
+
+            v = math.inf
+            for move in legal_moves:
+                new_state = state.forecast_move(move)
+                v = min(v, max_value(new_state, dep - 1))
+            return v
+
+        best_move = (-1, -1)
+        best_score = -math.inf
+        for move in game.get_legal_moves():
+            new_state = game.forecast_move(move)
+            score = min_value(new_state, depth - 1)
+            if score > best_score:
+                best_move = move
+                best_score = score
+
+        return best_move
 
 
 class AlphaBetaPlayer(IsolationPlayer):
