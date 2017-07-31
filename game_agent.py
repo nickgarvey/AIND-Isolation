@@ -290,9 +290,18 @@ class AlphaBetaPlayer(IsolationPlayer):
             (-1, -1) if there are no available legal moves.
         """
         self.time_left = time_left
+        depth = 1
+        best_move = (-1, -1)
+        while True:
+            try:
+                best_move = self.alphabeta(game, depth)
+                depth += 1
+            except SearchTimeout:
+                return best_move
+            if best_move == (-1, -1):
+                return best_move
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        return best_move
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf")):
         """Implement depth-limited minimax search with alpha-beta pruning as
@@ -339,8 +348,44 @@ class AlphaBetaPlayer(IsolationPlayer):
                 each helper function or else your agent will timeout during
                 testing.
         """
-        if self.time_left() < self.TIMER_THRESHOLD:
-            raise SearchTimeout()
+        def time_check():
+            if self.time_left() < self.TIMER_THRESHOLD:
+                raise SearchTimeout()
+        time_check()
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        player = game.active_player
+
+        def max_value(state, dep):
+            time_check()
+            legal_moves = state.get_legal_moves()
+            if dep == 0 or not legal_moves:
+                return self.score(state, player)
+
+            v = -math.inf
+            for move in legal_moves:
+                new_state = state.forecast_move(move)
+                v = max(v, min_value(new_state, dep - 1))
+            return v
+
+        def min_value(state, dep):
+            time_check()
+            legal_moves = state.get_legal_moves()
+            if dep == 0 or not legal_moves:
+                return self.score(state, player)
+
+            v = math.inf
+            for move in legal_moves:
+                new_state = state.forecast_move(move)
+                v = min(v, max_value(new_state, dep - 1))
+            return v
+
+        best_move = (-1, -1)
+        best_score = -math.inf
+        for move in game.get_legal_moves():
+            new_state = game.forecast_move(move)
+            score = min_value(new_state, depth - 1)
+            if score > best_score:
+                best_move = move
+                best_score = score
+
+        return best_move
