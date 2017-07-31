@@ -355,7 +355,7 @@ class AlphaBetaPlayer(IsolationPlayer):
 
         player = game.active_player
 
-        def max_value(state, dep):
+        def max_value(state, dep, alp, bet):
             time_check()
             legal_moves = state.get_legal_moves()
             if dep == 0 or not legal_moves:
@@ -364,10 +364,13 @@ class AlphaBetaPlayer(IsolationPlayer):
             v = -math.inf
             for move in legal_moves:
                 new_state = state.forecast_move(move)
-                v = max(v, min_value(new_state, dep - 1))
+                v = max(v, min_value(new_state, dep - 1, alp, bet))
+                if v >= bet:
+                    return v
+                alp = max(v, alp)
             return v
 
-        def min_value(state, dep):
+        def min_value(state, dep, alp, bet):
             time_check()
             legal_moves = state.get_legal_moves()
             if dep == 0 or not legal_moves:
@@ -376,16 +379,22 @@ class AlphaBetaPlayer(IsolationPlayer):
             v = math.inf
             for move in legal_moves:
                 new_state = state.forecast_move(move)
-                v = min(v, max_value(new_state, dep - 1))
+                v = min(v, max_value(new_state, dep - 1, alp, bet))
+                if v <= alp:
+                    return v
+                bet = min(v, bet)
             return v
 
         best_move = (-1, -1)
         best_score = -math.inf
         for move in game.get_legal_moves():
             new_state = game.forecast_move(move)
-            score = min_value(new_state, depth - 1)
+            score = min_value(new_state, depth - 1, alpha, beta)
             if score > best_score:
                 best_move = move
                 best_score = score
+            if score >= beta:
+                return best_move
+            alpha = max(score, alpha)
 
         return best_move
