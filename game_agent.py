@@ -12,83 +12,71 @@ class SearchTimeout(Exception):
 
 
 def custom_score(game, player):
-    """Calculate the heuristic value of a game state from the point of view
-    of the given player.
-
-    This should be the best heuristic function for your project submission.
-
-    Note: this function should be called from within a Player instance as
-    `self.score()` -- you should not need to call this function directly.
-
-    Parameters
-    ----------
-    game : `isolation.Board`
-        An instance of `isolation.Board` encoding the current state of the
-        game (e.g., player locations and blocked cells).
-
-    player : object
-        A player instance in the current game (i.e., an object corresponding to
-        one of the player objects `game.__player_1__` or `game.__player_2__`.)
-
-    Returns
-    -------
-    float
-        The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    This is very similar to the improved_score test, but the key thing is that
+    it only cares if there are at least 2 open moves, we don't treat 3-8 moves
+    any different than 2.
+
+    This doesn't outperform improved_score, but it does suggest a lot of the
+    benefit of it isn't in maximizing open moves, but in leaving an option open
+    in case of counter attacks.
+    """
+
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    return float(min(2, own_moves) - min(2, opp_moves))
+
+
+DIRECTIONS = [(-2, -1), (-2, 1), (-1, -2), (-1, 2),
+              (1, -2), (1, 2), (2, -1), (2, 1)]
+
+DIRECTIONS_TRIPLE = list(set((x[0] + y[0] + z[0], x[1] + y[1] + z[1])
+                              for x in DIRECTIONS
+                              for y in DIRECTIONS
+                              for z in DIRECTIONS))
 
 
 def custom_score_2(game, player):
-    """Calculate the heuristic value of a game state from the point of view
-    of the given player.
-
-    Note: this function should be called from within a Player instance as
-    `self.score()` -- you should not need to call this function directly.
-
-    Parameters
-    ----------
-    game : `isolation.Board`
-        An instance of `isolation.Board` encoding the current state of the
-        game (e.g., player locations and blocked cells).
-
-    player : object
-        A player instance in the current game (i.e., an object corresponding to
-        one of the player objects `game.__player_1__` or `game.__player_2__`.)
-
-    Returns
-    -------
-    float
-        The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    This counts the number of open blank squares of the same color as the
+    current player.
+    """
+    if game.is_winner(player):
+        return float("inf")
+    if game.is_loser(player):
+        return float("-inf")
+
+    blank_spaces = game.get_blank_spaces()
+    loc = game.get_player_location(player)
+    color = (loc[0] + loc[1]) % 2
+    shared_color = [blank for blank in game.get_blank_spaces()
+                    if (blank[0] + blank[1]) % 2 != color]
+    return float(len(shared_color))
 
 
 def custom_score_3(game, player):
-    """Calculate the heuristic value of a game state from the point of view
-    of the given player.
-
-    Note: this function should be called from within a Player instance as
-    `self.score()` -- you should not need to call this function directly.
-
-    Parameters
-    ----------
-    game : `isolation.Board`
-        An instance of `isolation.Board` encoding the current state of the
-        game (e.g., player locations and blocked cells).
-
-    player : object
-        A player instance in the current game (i.e., an object corresponding to
-        one of the player objects `game.__player_1__` or `game.__player_2__`.)
-
-    Returns
-    -------
-    float
-        The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    This tries to look three moves ahead, but doesn't worry about collisions
+    """
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    my_loc = game.get_player_location(player)
+    their_loc = game.get_player_location(game.get_opponent(player))
+
+    open_squares = game.get_blank_spaces()
+    score = lambda l: sum(1. for dd in DIRECTIONS_TRIPLE
+                          if (l[0] + dd[0], l[1] + dd[1]) in open_squares)
+    return score(my_loc) - score(their_loc)
 
 
 class IsolationPlayer:
@@ -298,8 +286,6 @@ class AlphaBetaPlayer(IsolationPlayer):
                 depth += 1
             except SearchTimeout:
                 return best_move
-            if best_move == (-1, -1):
-                return best_move
 
         return best_move
 
@@ -390,7 +376,7 @@ class AlphaBetaPlayer(IsolationPlayer):
         for move in game.get_legal_moves():
             new_state = game.forecast_move(move)
             score = min_value(new_state, depth - 1, alpha, beta)
-            if score > best_score:
+            if best_move == (-1, -1) or score > best_score:
                 best_move = move
                 best_score = score
             if score >= beta:
